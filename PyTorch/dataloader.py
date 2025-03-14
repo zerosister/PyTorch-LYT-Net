@@ -12,8 +12,8 @@ class PairedDataset(Dataset):
         self.crop_size = crop_size
         self.training = training
 
-        self.low_images = sorted([f for f in os.listdir(low_dir) if os.path.isfile(os.path.join(low_dir, f))])
-        self.high_images = sorted([f for f in os.listdir(high_dir) if os.path.isfile(os.path.join(high_dir, f))])
+        self.low_images = sorted([f for f in os.listdir(low_dir) if os.path.isfile(os.path.join(low_dir, f)) and f.endswith('.png')])
+        self.high_images = sorted([f for f in os.listdir(high_dir) if os.path.isfile(os.path.join(high_dir, f)) and f.endswith('.png')])
 
         assert len(self.low_images) == len(self.high_images), "Mismatch in number of images"
 

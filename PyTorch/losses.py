@@ -8,7 +8,8 @@ import torchvision.transforms as T
 class VGGPerceptualLoss(nn.Module):
     def __init__(self, device):
         super(VGGPerceptualLoss, self).__init__()
-        vgg = models.vgg19(weights=True).features[:16]  # Until block3_conv3
+        # vgg = models.vgg19(weights=True).features[:16]  # Until block3_conv3# vgg = models.vgg19(weights=True).features[:16]  # Until block3_conv3
+        vgg = models.vgg19(pretrained=True).features[:16]  # Until block3_conv3
         self.loss_model = vgg.to(device).eval()
         for param in self.loss_model.parameters():
             param.requires_grad = False

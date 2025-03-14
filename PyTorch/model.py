@@ -76,6 +76,8 @@ class MultiHeadSelfAttention(nn.Module):
 
     def forward(self, x):
         batch_size, _, height, width = x.size()
+        # do spatial attention
+        x = x.permute(0, 2, 3, 1)
         x = x.reshape(batch_size, height * width, -1)
 
         query = self.split_heads(self.query_dense(x), batch_size)
@@ -116,8 +118,8 @@ class Denoiser(nn.Module):
         self.activation = getattr(F, activation)
         self._init_weights()
 
-    def forward(self, x):
-        x1 = self.activation(self.conv1(x))
+    def forward(self, inputs):
+        x1 = self.activation(self.conv1(inputs))
         x2 = self.activation(self.conv2(x1))
         x3 = self.activation(self.conv3(x2))
         x4 = self.activation(self.conv4(x3))
@@ -127,7 +129,7 @@ class Denoiser(nn.Module):
         x = self.up2(x + x2)
         x = x + x1
         x = self.res_layer(x)
-        return torch.tanh(self.output_layer(x + x))
+        return torch.tanh(self.output_layer(x + inputs))
     
     def _init_weights(self):
         for layer in [self.conv1, self.conv2, self.conv3, self.conv4, self.output_layer, self.res_layer]:

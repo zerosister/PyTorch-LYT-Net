@@ -1,8 +1,11 @@
+from sched import scheduler
+import debugpy
 import torch
 import torch.optim as optim
 import torch.nn.functional as F
 import torch.nn as nn
-from torch.optim.lr_scheduler import CosineAnnealingLR
+# from torch.optim.lr_scheduler import CosineAnnealingLR
+from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
 import torchvision.transforms as transforms
 from torchvision.utils import save_image
 from torchmetrics.functional import structural_similarity_index_measure
@@ -11,6 +14,8 @@ from losses import CombinedLoss
 from dataloader import create_dataloaders
 import os
 import numpy as np
+from tqdm import tqdm
+import logging
 
 def calculate_psnr(img1, img2, max_pixel_value=1.0, gt_mean=True):
     """
@@ -83,21 +88,39 @@ def validate(model, dataloader, device):
     avg_ssim = total_ssim / len(dataloader)
     return avg_psnr, avg_ssim
 
+def setup_logger():
+    """配置日志系统"""
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        filename='training.log',  # 日志保存到文件
+        filemode='a'             # 追加模式
+    )
+    return logging.getLogger()
+
 def main():
     # Hyperparameters
-    train_low = 'data/LOLv1/Train/input'
-    train_high = 'data/LOLv1/Train/target'
-    test_low = 'data/LOLv1/Test/input'
-    test_high = 'data/LOLv1/Test/target'
-    learning_rate = 2e-4 
-    num_epochs = 1500
+    train_low = 'data/LOLv1/our485/low'
+    train_high = 'data/LOLv1/our485/high'
+    test_low = 'data/LOLv1/eval15/low'
+    test_high = 'data/LOLv1/eval15/high'
+    
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    print(f'LR: {learning_rate}; Epochs: {num_epochs}')
-
+    logger = setup_logger()
+    
     # Data loaders
     train_loader, test_loader = create_dataloaders(train_low, train_high, test_low, test_high, crop_size=256, batch_size=1)
-    print(f'Train loader: {len(train_loader)}; Test loader: {len(test_loader)}')
+    logger.info(f"Train loader: {len(train_loader)}; Test loader: {len(test_loader)}")
 
+    # learning rate setting 
+    learning_rate = 2e-4 
+    min_lr = 1e-6
+    num_epochs = 1500
+    steps_per_epoch = len(train_loader)
+    first_decay_steps = 150 * steps_per_epoch
+    logger.info(f'LR: {learning_rate}; Epochs: {num_epochs}')
+
+    
     # Model, loss, optimizer, and scheduler
     model = LYT().to(device)
     # if torch.cuda.device_count() > 1:
@@ -105,15 +128,25 @@ def main():
 
     criterion = CombinedLoss(device)
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-    scheduler = CosineAnnealingLR(optimizer, T_max=num_epochs)
+    # scheduler = CosineAnnealingLR(optimizer, T_max=num_epochs)
+    scheduler = CosineAnnealingWarmRestarts(optimizer,T_0=first_decay_steps,T_mult=1,eta_min=min_lr)
+    
     scaler = torch.cuda.amp.GradScaler()
 
     best_psnr = 0
-    print('Training started.')
+    logger.info('Training started.')
     for epoch in range(num_epochs):
         model.train()
         train_loss = 0.0
-        for batch_idx, batch in enumerate(train_loader):
+        
+        progress_bar = tqdm(
+            enumerate(train_loader),
+            total=len(train_loader),
+            desc=f"Epoch {epoch+1}/{num_epochs}",
+            leave=True,
+            dynamic_ncols=True
+        )
+        for batch_idx, batch in progress_bar:
             inputs, targets = batch
             inputs, targets = inputs.to(device), targets.to(device)
 
@@ -127,15 +160,22 @@ def main():
             scaler.update()
 
             train_loss += loss.item()
+            
+            # 更新进度条
+            progress_bar.set_postfix(
+                loss=f"{loss.item():.4f}",
+                avg_loss=f"{train_loss/(batch_idx+1):.4f}",
+                lr=f"{optimizer.param_groups[0]['lr']:.2e}"
+            )
 
         avg_psnr, avg_ssim = validate(model, test_loader, device)
-        print(f'Epoch {epoch + 1}/{num_epochs}, PSNR: {avg_psnr:.6f}, SSIM: {avg_ssim:.6f}')
+        logger.info(f'Epoch {epoch + 1}/{num_epochs}, PSNR: {avg_psnr:.6f}, SSIM: {avg_ssim:.6f}, LR: {optimizer.param_groups[0]["lr"]:.3e}')
         scheduler.step()
 
         if avg_psnr > best_psnr:
             best_psnr = avg_psnr
-            torch.save(model.state_dict(), 'best_model.pth')
-            print(f'Saving model with PSNR: {best_psnr:.6f}')
+            torch.save(model.state_dict(), './checkpoints/training_epoch_' + str(epoch) +'_best_model.pth')
+            logger.info(f'Saving model with PSNR: {best_psnr:.6f}')
 
 if __name__ == '__main__':
     main()
