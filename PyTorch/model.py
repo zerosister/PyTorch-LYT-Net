@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.nn.init as init
+from hvi import RGB_HVI
 
 class LayerNormalization(nn.Module):
     def __init__(self, dim):
@@ -138,7 +139,7 @@ class Denoiser(nn.Module):
                 init.constant_(layer.bias, 0)
 
 class LYT(nn.Module):
-    def __init__(self, filters=32):
+    def __init__(self, filters=32, args=None):
         super(LYT, self).__init__()
         self.process_y = self._create_processing_layers(filters)
         self.process_cb = self._create_processing_layers(filters)
@@ -154,6 +155,10 @@ class LYT(nn.Module):
         self.msef = MSEFBlock(filters)
         self.recombine = nn.Conv2d(filters * 2, filters, kernel_size=3, padding=1)
         self.final_adjustments = nn.Conv2d(filters, 3, kernel_size=3, padding=1)
+        self.use_hvi = args.use_hvi
+        print(self.use_hvi)
+        if self.use_hvi:
+            self.rgb_hvi = RGB_HVI()
         self._init_weights()
 
     def _create_processing_layers(self, filters):
@@ -173,8 +178,12 @@ class LYT(nn.Module):
         return yuv
 
     def forward(self, inputs):
-        ycbcr = self._rgb_to_ycbcr(inputs)
-        y, cb, cr = torch.split(ycbcr, 1, dim=1)
+        if not self.use_hvi:
+            ycbcr = self._rgb_to_ycbcr(inputs)
+            y, cb, cr = torch.split(ycbcr, 1, dim=1)
+        else:
+            ycbcr = self.rgb_hvi.HVIT(inputs)
+            cb, cr, y = torch.split(ycbcr, 1, dim=1)
         cb = self.denoiser_cb(cb) + cb
         cr = self.denoiser_cr(cr) + cr
 

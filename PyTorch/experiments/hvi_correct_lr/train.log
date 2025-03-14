@@ -1,0 +1,90 @@
+2025-03-14 14:40:34,795 - INFO - Train loader: 485; Test loader: 15
+2025-03-14 14:40:34,795 - INFO - LR: 0.0002; Epochs: 1500; Decay_steps: 150
+2025-03-14 14:40:34,813 - INFO - LYT(
+  (process_y): Sequential(
+    (0): Conv2d(1, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (1): ReLU(inplace=True)
+  )
+  (process_cb): Sequential(
+    (0): Conv2d(1, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (1): ReLU(inplace=True)
+  )
+  (process_cr): Sequential(
+    (0): Conv2d(1, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (1): ReLU(inplace=True)
+  )
+  (denoiser_cb): Denoiser(
+    (conv1): Conv2d(1, 16, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (conv2): Conv2d(16, 16, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1))
+    (conv3): Conv2d(16, 16, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1))
+    (conv4): Conv2d(16, 16, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1))
+    (bottleneck): MultiHeadSelfAttention(
+      (query_dense): Linear(in_features=16, out_features=16, bias=True)
+      (key_dense): Linear(in_features=16, out_features=16, bias=True)
+      (value_dense): Linear(in_features=16, out_features=16, bias=True)
+      (combine_heads): Linear(in_features=16, out_features=16, bias=True)
+    )
+    (up2): Upsample(scale_factor=2.0, mode=nearest)
+    (up3): Upsample(scale_factor=2.0, mode=nearest)
+    (up4): Upsample(scale_factor=2.0, mode=nearest)
+    (output_layer): Conv2d(1, 1, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (res_layer): Conv2d(16, 1, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+  )
+  (denoiser_cr): Denoiser(
+    (conv1): Conv2d(1, 16, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (conv2): Conv2d(16, 16, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1))
+    (conv3): Conv2d(16, 16, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1))
+    (conv4): Conv2d(16, 16, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1))
+    (bottleneck): MultiHeadSelfAttention(
+      (query_dense): Linear(in_features=16, out_features=16, bias=True)
+      (key_dense): Linear(in_features=16, out_features=16, bias=True)
+      (value_dense): Linear(in_features=16, out_features=16, bias=True)
+      (combine_heads): Linear(in_features=16, out_features=16, bias=True)
+    )
+    (up2): Upsample(scale_factor=2.0, mode=nearest)
+    (up3): Upsample(scale_factor=2.0, mode=nearest)
+    (up4): Upsample(scale_factor=2.0, mode=nearest)
+    (output_layer): Conv2d(1, 1, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (res_layer): Conv2d(16, 1, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+  )
+  (lum_pool): MaxPool2d(kernel_size=8, stride=8, padding=0, dilation=1, ceil_mode=False)
+  (lum_mhsa): MultiHeadSelfAttention(
+    (query_dense): Linear(in_features=32, out_features=32, bias=True)
+    (key_dense): Linear(in_features=32, out_features=32, bias=True)
+    (value_dense): Linear(in_features=32, out_features=32, bias=True)
+    (combine_heads): Linear(in_features=32, out_features=32, bias=True)
+  )
+  (lum_up): Upsample(scale_factor=8.0, mode=nearest)
+  (lum_conv): Conv2d(32, 32, kernel_size=(1, 1), stride=(1, 1))
+  (ref_conv): Conv2d(64, 32, kernel_size=(1, 1), stride=(1, 1))
+  (msef): MSEFBlock(
+    (layer_norm): LayerNormalization(
+      (norm): LayerNorm((32,), eps=1e-05, elementwise_affine=True)
+    )
+    (depthwise_conv): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), groups=32)
+    (se_attn): SEBlock(
+      (pool): AdaptiveAvgPool2d(output_size=1)
+      (fc1): Linear(in_features=32, out_features=2, bias=True)
+      (fc2): Linear(in_features=2, out_features=32, bias=True)
+    )
+  )
+  (recombine): Conv2d(64, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+  (final_adjustments): Conv2d(32, 3, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+  (rgb_hvi): RGB_HVI()
+)
+2025-03-14 14:40:36,175 - INFO - Training started.
+2025-03-14 14:41:28,085 - INFO - Epoch 1/1500, PSNR: 21.680648, SSIM: 0.657481, LR: 2.000e-04
+2025-03-14 14:41:28,184 - INFO - Saving model with PSNR: 21.680648
+2025-03-14 14:42:16,267 - INFO - Epoch 2/1500, PSNR: 22.160418, SSIM: 0.720754, LR: 2.000e-04
+2025-03-14 14:42:16,365 - INFO - Saving model with PSNR: 22.160418
+2025-03-14 14:43:04,329 - INFO - Epoch 3/1500, PSNR: 22.341184, SSIM: 0.744375, LR: 1.999e-04
+2025-03-14 14:43:04,428 - INFO - Saving model with PSNR: 22.341184
+2025-03-14 14:43:52,039 - INFO - Epoch 4/1500, PSNR: 23.176380, SSIM: 0.759547, LR: 1.998e-04
+2025-03-14 14:43:52,140 - INFO - Saving model with PSNR: 23.176380
+2025-03-14 14:44:39,785 - INFO - Epoch 5/1500, PSNR: 23.145839, SSIM: 0.765218, LR: 1.997e-04
+2025-03-14 14:45:27,540 - INFO - Epoch 6/1500, PSNR: 23.547482, SSIM: 0.769202, LR: 1.995e-04
+2025-03-14 14:45:27,642 - INFO - Saving model with PSNR: 23.547482
+2025-03-14 14:46:16,423 - INFO - Epoch 7/1500, PSNR: 23.995869, SSIM: 0.779335, LR: 1.992e-04
+2025-03-14 14:46:16,525 - INFO - Saving model with PSNR: 23.995869
+2025-03-14 14:47:04,303 - INFO - Epoch 8/1500, PSNR: 24.306576, SSIM: 0.783469, LR: 1.989e-04
+2025-03-14 14:47:04,406 - INFO - Saving model with PSNR: 24.306576

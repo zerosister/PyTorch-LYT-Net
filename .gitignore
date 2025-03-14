@@ -1,4 +1,5 @@
 PyTorch/data/*
 training_epoch*
 .vscode
+epoch*
 __pycache*

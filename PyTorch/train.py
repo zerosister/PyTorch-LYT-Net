@@ -1,3 +1,4 @@
+from ast import arg
 from sched import scheduler
 import debugpy
 import torch
@@ -16,6 +17,7 @@ import os
 import numpy as np
 from tqdm import tqdm
 import logging
+import argparse
 
 def calculate_psnr(img1, img2, max_pixel_value=1.0, gt_mean=True):
     """
@@ -88,25 +90,43 @@ def validate(model, dataloader, device):
     avg_ssim = total_ssim / len(dataloader)
     return avg_psnr, avg_ssim
 
-def setup_logger():
+def setup_logger(log_path='training.log'):
     """配置日志系统"""
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(levelname)s - %(message)s',
-        filename='training.log',  # 日志保存到文件
-        filemode='a'             # 追加模式
+        filename=log_path,  # 日志保存到文件
+        filemode='w'             # 覆盖模式
     )
     return logging.getLogger()
 
-def main():
+def main(args):
     # Hyperparameters
-    train_low = 'data/LOLv1/our485/low'
-    train_high = 'data/LOLv1/our485/high'
-    test_low = 'data/LOLv1/eval15/low'
-    test_high = 'data/LOLv1/eval15/high'
+    dataset = args.dataset
+    dataset_paths = {
+        "LOLv1": "LOLv1",
+        "LOLv2Real": "LOLv2/Real_captured",
+        "LOLv2Synthetic": "LOLv2/Synthetic"
+    }
+
+    data_path = dataset_paths.get(dataset, "LOLv1")
+    train_low = f'data/{data_path}/Train/Low'
+    train_high = f'data/{data_path}/Train/Normal'
+    test_low = f'data/{data_path}/Test/Low'
+    test_high = f'data/{data_path}/Test/Normal'
     
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    logger = setup_logger()
+    lab_name = args.lab_name
+    folder = os.path.join(os.getcwd(),"experiments", lab_name)
+    os.makedirs(folder, exist_ok=True)
+    model_dir = os.path.join(folder, "models")
+    os.makedirs(model_dir, exist_ok=True)
+    print(f"Made lab Dir {folder} and {model_dir}")
+    log_path = os.path.join(folder, "train.log")
+    
+    device = torch.device(f'cuda:{args.cuda}' if torch.cuda.is_available() else 'cpu')
+    print(f"using cuda:{args.cuda}")
+    logger = setup_logger(log_path)
+    print(f"output log in {log_path}")
     
     # Data loaders
     train_loader, test_loader = create_dataloaders(train_low, train_high, test_low, test_high, crop_size=256, batch_size=1)
@@ -116,13 +136,13 @@ def main():
     learning_rate = 2e-4 
     min_lr = 1e-6
     num_epochs = 1500
-    steps_per_epoch = len(train_loader)
-    first_decay_steps = 150 * steps_per_epoch
-    logger.info(f'LR: {learning_rate}; Epochs: {num_epochs}')
+    first_decay_steps = 150
+    logger.info(f'LR: {learning_rate}; Epochs: {num_epochs}; Decay_steps: {first_decay_steps}')
 
     
     # Model, loss, optimizer, and scheduler
-    model = LYT().to(device)
+    model = LYT(args=args).to(device)
+    logger.info(model)
     # if torch.cuda.device_count() > 1:
     #     model = torch.nn.DataParallel(model)
 
@@ -174,8 +194,14 @@ def main():
 
         if avg_psnr > best_psnr:
             best_psnr = avg_psnr
-            torch.save(model.state_dict(), './checkpoints/training_epoch_' + str(epoch) +'_best_model.pth')
+            torch.save(model.state_dict(), os.path.join(model_dir, "epoch"+str(epoch)+'.pth'))
             logger.info(f'Saving model with PSNR: {best_psnr:.6f}')
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(description='Training script')
+    parser.add_argument('--use_hvi', type=bool, default=False)
+    parser.add_argument('--lab_name', type=str, default="expr_1")
+    parser.add_argument('--dataset', type=str, default="LOLv1")
+    parser.add_argument('--cuda', type=int, default=0)
+    args = parser.parse_args()
+    main(args)
