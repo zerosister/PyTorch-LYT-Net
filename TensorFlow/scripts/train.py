@@ -101,6 +101,10 @@ def start_train(dataset):
 
         raw_test_path = './data/LOLv2/Real_captured/Test/Low/*.png'
         corrected_test_path = './data/LOLv2/Real_captured/Test/Normal/*.png'
+        # 只使用 GPU 0
+        gpus = tf.config.experimental.list_physical_devices('GPU')
+        if gpus:
+            tf.config.experimental.set_visible_devices(gpus[1], 'GPU')
 
     elif dataset == 'LOLv2_Synthetic':
         raw_image_path = './data/LOLv2/Synthetic/Train/Low/*.png'

@@ -13,7 +13,7 @@ class CosineDecayWithRestartsLearningRateSchedule(tf.keras.optimizers.schedules.
         self.alpha = min_lr / initial_lr
 
     def __call__(self, step):
-        completed_fraction = step / self.total_steps
+        completed_fraction = tf.cast(step / self.total_steps, tf.float32)
         i_restart = tf.floor(tf.math.log(1 - completed_fraction * (1 - self.t_mul)) / tf.math.log(self.t_mul))
 
         sum_r = (1 - self.t_mul ** i_restart) / (1 - self.t_mul)
