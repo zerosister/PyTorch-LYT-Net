@@ -3,3 +3,4 @@ training_epoch*
 .vscode
 epoch*
 __pycache*
+TensorFlow/data/*
